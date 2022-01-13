@@ -1,0 +1,112 @@
+---
+title: "ESM244_Lab1"
+author: "Kristina Fauss"
+date: "1/12/2022"
+output: html_document
+---
+
+```{r setup, include=TRUE, warnings=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+
+library(tidyverse)
+library(here)
+library(sf)
+library(tmap)
+#install.packages('tmap')
+#install.packages('here')
+#install.packages('sf')
+#update.packages(ask=FALSE)
+```
+
+cmd-shift-enter : run cell
+
+### Read in data
+
+cmd-option-i : create code chunk
+```{r}
+sf_trees <- read_csv(here('data','sf_trees','sf_trees.csv'),
+                     show_col_types=FALSE)
+```
+
+### Part 1: wrangling and ggplot
+
+**EX 1** Find counts of obs by `legal_status` & wrangle
+
+```{r}
+### Method 1: group_by90 %>% summarize()
+sf_trees %>%
+  group_by(legal_status) %>%
+  summarize(tree_count = n())
+
+### Method 2: new way + functions
+top_5_status <- sf_trees %>%
+  count(legal_status) %>%
+  drop_na(legal_status) %>% # drop any row with an na (in the legal status col)
+  rename(tree_count=n) %>%
+  relocate(tree_count) %>% # bring col to the front
+  slice_max(tree_count, n=5) %>% # grab the top 5
+  arrange(-tree_count) #low->high or high->low
+```
+
+Make a graph of top 5 from above
+
+```{r}
+ggplot(data = top_5_status, aes(x = fct_reorder(legal_status, tree_count), y=tree_count))+ 
+  geom_col(fill='dark green')+
+  labs(x='Legal Status', y='Tree count')+
+  coord_flip()+
+  theme_dark()
+```
+
+**Ex 2** More wrangling: Only keep obs where legal status is "permitted site" and caretaker is `MTA`, and store as `permitted_data_df`
+
+shift-cmd-c : comment out a line
+
+```{r}
+# sf_trees$legal_status %>% unique
+# unique(sf_trees,$)
+permitted_data_df <- sf_trees %>%
+  filter(legal_status %in% c('Permitted Site','Private'), caretaker=='MTA') # , means 'and' can also use &; | means 'or'
+  
+```
+
+
+**EX 3** Only keep Blackwood Acacia trees and then only keep columns `legal_status`, `date`, `latitude`, and `longitude` and store at `blackwood_acacia_df`
+
+```{r}
+blackwood_acacia_df <- sf_trees %>%
+  filter(str_detect(species,'Blackwood Acacia')) %>% # as long at that str is in the element, it is kept (even if there's other stuff)
+  select(legal_status, date, lat=latitude, lon=longitude) # lat=latitued renames lattitude to lat
+
+### Make a graph of locations
+ggplot(data=blackwood_acacia_df, aes(x=lat, y=lon))+
+  geom_point(color='darkgreen')# this is not how you plot spatial data!
+```
+
+**EX 4** use `tidyr::seperate`
+
+```{r}
+sf_trees_sep <- sf_trees %>%
+  separate(species, into=c('spp_scientific','spp_common'), sep=' :: ')
+```
+
+**EX 5** use `tidyr::unite`
+
+```{r}
+ex_5 <- sf_trees %>%
+  unite('id_status', tree_id, legal_status, sep = '_COOL_') # 'id_status' is the new col name; sep is a seperator string you set
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
